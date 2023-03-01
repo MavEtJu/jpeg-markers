@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -69,7 +70,7 @@ writeit = 1;
 					break;
 			offset++;
 		}
-		printf(" (%d bytes)", offset - headersize);
+		printf(" (pixels %d bytes)", offset - headersize);
 		return offset;
 	}
 	if (data[0] == 0xff && data[1] == 0xfe) {
@@ -96,9 +97,25 @@ writeit = 1;
 		printf("FFD9: End of Image");
 		return 0;
 	}
-
+	if (data[0] == 0xff && data[1] == 0xdd) {
+		printf("FFDD: Define Restart Interval [iterval is every %d MCUs]", data[4] << 8 | data[5]);
+		return 6;
+	}
+	if (data[0] == 0xff && data[1] >= 0xd0 && data[1] <= 0xd7 ) {
+		printf("FFD%d: Restart %d", data[1] ^ 0xd0, data[1] ^ 0xd0);
+		unsigned int offset = 2;
+		while (1) {
+			if (data[offset] == 0xff)
+				if (data[offset + 1] != 0x00)
+					break;
+			offset++;
+		}
+		printf(" (pixels %d bytes)", offset - 2);
+		return offset;
+	}
+	
 	printf("Unknown: %x %x\n", data[0], data[1]);
-	exit(0);
+	 exit(0);
 }
 
 int main(int argc, char **argv)
